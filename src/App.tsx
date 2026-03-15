@@ -21,6 +21,7 @@ export default function App() {
     searchTasks,
     exportJSON,
     importJSON,
+    exportWeeklySummary,
   } = useTasks();
 
   const { alerts, dismissAlert } = useReminders(tasks);
@@ -90,6 +91,7 @@ export default function App() {
       <Header
         onSearchClick={() => setShowSearch(true)}
         onExport={exportJSON}
+        onWeeklySummary={() => exportWeeklySummary()}
         onImport={handleImportRequest}
         onNewTask={openNewTask}
         onSessionsClick={() => setShowSessionsPanel((v) => !v)}

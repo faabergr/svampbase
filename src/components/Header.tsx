@@ -6,10 +6,11 @@ interface HeaderProps {
   onImport: (file: File) => void;
   onNewTask: () => void;
   onSessionsClick: () => void;
+  onWeeklySummary: () => void;
   hasActiveSessions?: boolean;
 }
 
-export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, hasActiveSessions }: HeaderProps) {
+export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, hasActiveSessions }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleImportClick() {
@@ -48,6 +49,14 @@ export function Header({ onSearchClick, onExport, onImport, onNewTask, onSession
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <span className="hidden sm:inline">Search</span>
+        </button>
+
+        <button
+          onClick={onWeeklySummary}
+          className="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-sm transition-colors"
+          title="Export a markdown summary of this week's work"
+        >
+          This week
         </button>
 
         <button

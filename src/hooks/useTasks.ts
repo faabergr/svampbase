@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Task, TaskStatus, StatusHistoryEntry } from '../lib/types';
 import { getAllTasks, putTask, deleteTask, clearAllTasks } from '../lib/db';
 import { generateTaskId, nanoid, computeReminderFiresAt } from '../lib/utils';
+import { downloadWeeklySummary } from '../lib/weeklyExport';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -155,6 +156,10 @@ export function useTasks() {
     setTasks(fresh);
   }, []);
 
+  const exportWeeklySummary = useCallback((days = 7): void => {
+    downloadWeeklySummary(tasks, days);
+  }, [tasks]);
+
   return {
     tasks,
     loading,
@@ -165,5 +170,6 @@ export function useTasks() {
     searchTasks,
     exportJSON,
     importJSON,
+    exportWeeklySummary,
   };
 }
