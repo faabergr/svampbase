@@ -2,7 +2,7 @@
 
 > *Svamp* is the Norwegian word for sponge — Svampbase soaks up knowledge about all your tasks so you can put them down and pick them back up without losing the thread.
 
-A progressive web app for managers who get interrupted. Unlike generic kanban boards, Svampbase is built around the reality that your attention is constantly pulled away from work in progress — and that getting back up to speed is half the battle.
+A task tracking tool for managers who get interrupted. Unlike generic kanban boards, Svampbase is built around the reality that your attention is constantly pulled away — and that getting back up to speed is half the battle.
 
 ## Features
 
@@ -21,25 +21,31 @@ Tasks can also be marked **Complete** or **Archived** to get them off the board 
 
 ### Boomerang reminders
 
-When you move a task to *Waiting on Response* or *Waiting on Dependency*, set a reminder duration — 4 hours, 1 business day, or 5 business days. When the timer fires, a banner appears on the board asking: did you get a reply? Move it back to *In Progress* or backburner it with one click.
+When you move a task to *Waiting on Response* or *Waiting on Dependency*, set a reminder duration — 4 hours, 1 business day, or 5 business days. When the timer fires, a banner appears on the board: did you get a reply? Move it back to *In Progress* or backburner it with one click. Deadlines work the same way.
 
-Deadlines work the same way: tasks due within 24 hours surface a reminder banner automatically.
+Task cards show a clock icon when a reminder is set — hover it to see exactly when it fires.
 
 ### Rich context on every task
 
-Managers lose context when they context-switch. Svampbase lets you attach everything you need to pick a task back up:
+Each task has a 4-tab modal for capturing everything you need to pick it back up:
 
-- Jira ticket links
-- Slack thread links
-- Any other URL
-- Free-text notes
-- Screenshots
+- **Details** — title, description, status, deadline, reminder duration
+- **Context** — Jira links, Slack links, URLs, free-text notes, screenshots
+- **History** — full log of every status change with timestamps and optional notes
+- **Related** — link tasks to each other, navigate between them directly
 
-Each task also maintains a full **status history** so you can see exactly what happened and when.
+### Claude sessions
 
-### Linked tasks
+From any task, open the **Sessions** tab to create a Claude Code session tied to that task. The session launches in Terminal with its own workspace folder. You can:
 
-Tasks can reference each other, similar to a simplified Jira. Navigate between related tasks directly from the task modal.
+- Upload files to the session folder from the browser — Claude can read them immediately
+- Reveal the session folder in Finder
+- Pause, resume, and end sessions
+- See all active sessions across tasks from the Sessions panel in the header
+
+### Weekly summary
+
+The **This week** button exports a Markdown file of everything you worked on in the last 7 days — completed tasks, archived tasks, and what's still in flight. Each entry includes links, notes, duration, and status journey. Useful as brag-sheet material, self-review input, or context to hand to Claude.
 
 ### Search
 
@@ -47,32 +53,26 @@ Full-text search across all tasks — title, description, ID, notes, and links �
 
 ### Export / Import
 
-All data lives in your browser (IndexedDB — no account, no server). Export everything to a single JSON file at any time. Import it back on any device. No lock-in.
+Export all tasks to a single JSON file at any time. Import it back on any machine. Your data is stored as a plain JSON file on disk (`server/data/tasks.json`) — readable in any editor, committable to a private git repo, and never locked into a proprietary format.
+
+---
 
 ## Getting started
 
 **Prerequisites:** Node.js 18+
 
+Both the frontend and backend need to be running.
+
+### 1. Frontend
+
 ```bash
-git clone <repo-url>
-cd svampbase
 npm install
 npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
 
-### Build for production
-
-```bash
-npm run build
-```
-
-The output in `dist/` is a fully static PWA — host it on any static file server. Install it to your home screen from the browser for an app-like experience.
-
-## Backend (Claude sessions)
-
-To manage Claude Code sessions from the app, run the local backend:
+### 2. Backend
 
 ```bash
 cd server
@@ -80,14 +80,32 @@ npm install
 npm run dev
 ```
 
-The backend runs on `http://localhost:3001`. With it running, you can create and resume Claude Code sessions linked to tasks directly from the task modal.
+The backend runs on `http://localhost:3001` and manages task storage, Claude session launching, and file uploads. The frontend will show an offline notice for session features if it can't reach the backend, but task management requires it.
+
+### Build for production
+
+```bash
+npm run build
+```
+
+The output in `dist/` is a static PWA. Host it on any static file server and install it to your home screen for an app-like experience. The backend still needs to run locally alongside it.
+
+---
 
 ## Tech stack
 
+**Frontend**
 - [React](https://react.dev) + TypeScript
 - [Vite](https://vitejs.dev) + [vite-plugin-pwa](https://vite-pwa-org.netlify.app)
 - [Tailwind CSS](https://tailwindcss.com)
-- [idb](https://github.com/jakearchibald/idb) (IndexedDB wrapper)
+
+**Backend**
+- [Express](https://expressjs.com) + TypeScript + [tsx](https://github.com/privatenumber/tsx)
+- Plain JSON files for storage (`server/data/`)
+- [multer](https://github.com/expressjs/multer) for file uploads
+- `osascript` for launching Terminal.app (macOS only)
+
+---
 
 ## Contributing
 
