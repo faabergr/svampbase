@@ -3,6 +3,7 @@ import type { Task, TaskStatus } from './lib/types';
 import { useTasks } from './hooks/useTasks';
 import { useReminders } from './hooks/useReminders';
 import { useSessions } from './hooks/useSessions';
+import { useBackendStatus } from './hooks/useBackendStatus';
 import { Header } from './components/Header';
 import { Board } from './components/Board';
 import { TaskModal } from './components/TaskModal';
@@ -27,6 +28,7 @@ export default function App() {
   const { alerts, dismissAlert } = useReminders(tasks);
   const { sessions } = useSessions();
   const hasActiveSessions = sessions.some((s) => s.status === 'active');
+  const backendStatus = useBackendStatus();
 
   const [modalTask, setModalTask] = useState<Task | null | undefined>(undefined); // undefined = closed, null = new
   const [showSearch, setShowSearch] = useState(false);
@@ -97,6 +99,16 @@ export default function App() {
         onSessionsClick={() => setShowSessionsPanel((v) => !v)}
         hasActiveSessions={hasActiveSessions}
       />
+
+      {backendStatus === 'offline' && (
+        <div className="bg-red-950 border-b border-red-800 px-4 py-2.5 flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+          <p className="text-red-200 text-sm">
+            Backend not running — tasks won't load.{' '}
+            <code className="font-mono text-red-300 text-xs">cd server && npm run dev</code>
+          </p>
+        </div>
+      )}
 
       <Board
         tasks={tasks}

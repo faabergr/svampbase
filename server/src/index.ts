@@ -269,6 +269,8 @@ app.post('/tasks/import', (req, res) => {
   res.json({ imported: tasks.length });
 });
 
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
 app.listen(PORT, () => {
   console.log(`Svampbase server running on http://localhost:${PORT}`);
 });
