@@ -1,4 +1,4 @@
-import type { Session, SessionStatus } from '../lib/sessionTypes';
+import type { Session, SessionStatus, SessionFile } from '../lib/sessionTypes';
 
 const BASE_URL = 'http://localhost:3001';
 
@@ -49,4 +49,22 @@ export function launchSession(id: string): Promise<Session> {
   return apiFetch<Session>(`/sessions/${id}/launch`, { method: 'POST' });
 }
 
-export type { Session, SessionStatus };
+export function getSessionFiles(sessionId: string): Promise<SessionFile[]> {
+  return apiFetch<SessionFile[]>(`/sessions/${sessionId}/files`);
+}
+
+export function uploadSessionFiles(sessionId: string, files: FileList | File[]): Promise<SessionFile[]> {
+  const form = new FormData();
+  Array.from(files).forEach((f) => form.append('files', f));
+  return fetch(`${BASE_URL}/sessions/${sessionId}/files`, { method: 'POST', body: form })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json() as Promise<SessionFile[]>;
+    });
+}
+
+export function deleteSessionFile(sessionId: string, filename: string): Promise<void> {
+  return apiFetch<void>(`/sessions/${sessionId}/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+}
+
+export type { Session, SessionStatus, SessionFile };

@@ -11,6 +11,7 @@ import { nanoid, formatRelativeTime, STATUS_LABELS, REMINDER_LABELS, computeRemi
 import { ConfirmDialog } from './ConfirmDialog';
 import { useSessions } from '../hooks/useSessions';
 import type { Session } from '../lib/sessionTypes';
+import { SessionFiles } from './SessionFiles';
 
 type Tab = 'details' | 'context' | 'history' | 'related' | 'sessions';
 
@@ -633,6 +634,7 @@ export function TaskModal({
                         ? formatRelativeTime(session.lastLaunchedAt)
                         : 'Never'}
                     </p>
+                    <SessionFiles sessionId={session.id} folderPath={session.folderPath} />
                     <div className="flex gap-1.5 flex-wrap">
                       <button
                         onClick={() => launchSession(session.id)}

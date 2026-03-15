@@ -4,6 +4,13 @@ import type { Session } from './types';
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+export const SESSIONS_FOLDER = path.join(__dirname, '..', 'sessions');
+
+export function createSessionFolder(sessionId: string): string {
+  const folderPath = path.join(SESSIONS_FOLDER, sessionId);
+  fs.mkdirSync(folderPath, { recursive: true });
+  return folderPath;
+}
 
 export function readSessions(): Session[] {
   if (!fs.existsSync(SESSIONS_FILE)) {
