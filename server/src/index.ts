@@ -5,6 +5,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import multer from 'multer';
 import { getAllSessions, getSession, upsertSession, deleteSession, createSessionFolder, SESSIONS_FOLDER } from './sessions';
+import { getAllTasks, getTask, upsertTask, deleteTask as deleteTaskStore, replaceAllTasks, generateTaskId } from './tasks';
 import { launchNewSession, resumeSession } from './terminal';
 import type { Session, SessionStatus, SessionFile } from './types';
 
@@ -219,6 +220,53 @@ app.delete('/sessions/:id/files/:filename', (req, res) => {
 
   fs.unlinkSync(filePath);
   res.status(204).send();
+});
+
+// --- Tasks ---
+
+app.get('/tasks', (_req, res) => {
+  res.json(getAllTasks());
+});
+
+app.post('/tasks', (req, res) => {
+  const partial = req.body as Record<string, unknown>;
+  if (!partial.title) { res.status(400).json({ error: 'title is required' }); return; }
+  const now = new Date().toISOString();
+  const task = {
+    ...partial,
+    id: generateTaskId(),
+    createdAt: now,
+    updatedAt: now,
+  };
+  upsertTask(task as { id: string });
+  res.status(201).json(task);
+});
+
+app.get('/tasks/:id', (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) { res.status(404).json({ error: 'Task not found' }); return; }
+  res.json(task);
+});
+
+app.put('/tasks/:id', (req, res) => {
+  const task = req.body as Record<string, unknown>;
+  if (!task || task.id !== req.params.id) { res.status(400).json({ error: 'Invalid task' }); return; }
+  const updated = { ...task, updatedAt: new Date().toISOString() };
+  upsertTask(updated as { id: string });
+  res.json(updated);
+});
+
+app.delete('/tasks/:id', (req, res) => {
+  const deleted = deleteTaskStore(req.params.id);
+  if (!deleted) { res.status(404).json({ error: 'Task not found' }); return; }
+  res.status(204).send();
+});
+
+app.post('/tasks/import', (req, res) => {
+  const { tasks } = req.body as { tasks: { id: string }[] };
+  if (!Array.isArray(tasks)) { res.status(400).json({ error: 'Expected { tasks: [...] }' }); return; }
+  replaceAllTasks(tasks);
+  res.json({ imported: tasks.length });
 });
 
 app.listen(PORT, () => {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, TaskStatus, StatusHistoryEntry } from '../lib/types';
-import { getAllTasks, putTask, deleteTask, clearAllTasks } from '../lib/db';
-import { generateTaskId, nanoid, computeReminderFiresAt } from '../lib/utils';
+import { api } from '../api/tasks';
+import { nanoid, computeReminderFiresAt } from '../lib/utils';
 import { downloadWeeklySummary } from '../lib/weeklyExport';
 
 export function useTasks() {
@@ -9,20 +9,17 @@ export function useTasks() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAllTasks().then((t) => {
-      setTasks(t);
-      setLoading(false);
-    });
+    api.getAllTasks()
+      .then((t) => { setTasks(t); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
   const createTask = useCallback(
     async (partial: Partial<Task> & { title: string }): Promise<Task> => {
       const now = new Date().toISOString();
-      const allTasks = await getAllTasks();
-      const id = generateTaskId(allTasks);
       const status: TaskStatus = partial.status ?? 'in-progress';
 
-      let reminderFiresAt: string | undefined = undefined;
+      let reminderFiresAt: string | undefined;
       if ((status === 'waiting-on-response' || status === 'waiting-on-dependency') && partial.reminderDuration) {
         reminderFiresAt = computeReminderFiresAt(partial.reminderDuration, new Date()).toISOString();
       }
@@ -34,24 +31,18 @@ export function useTasks() {
         toStatus: status,
       };
 
-      const task: Task = {
-        id,
-        title: partial.title,
-        description: partial.description ?? '',
+      // Send to backend — server assigns the TASK-NNN id
+      const task = await api.createTask({
+        ...partial,
         status,
-        createdAt: now,
-        updatedAt: now,
-        deadline: partial.deadline,
-        reminderDuration: partial.reminderDuration,
         reminderFiresAt,
         links: partial.links ?? [],
         notes: partial.notes ?? [],
         screenshots: partial.screenshots ?? [],
         relatedTaskIds: partial.relatedTaskIds ?? [],
         history: [historyEntry],
-      };
+      });
 
-      await putTask(task);
       setTasks((prev) => [...prev, task]);
       return task;
     },
@@ -59,16 +50,13 @@ export function useTasks() {
   );
 
   const updateTask = useCallback(async (updated: Task): Promise<void> => {
-    const now = new Date().toISOString();
-    const task: Task = { ...updated, updatedAt: now };
-    await putTask(task);
+    const task = await api.updateTask({ ...updated, updatedAt: new Date().toISOString() });
     setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
   }, []);
 
   const changeTaskStatus = useCallback(
     async (taskId: string, newStatus: TaskStatus, note?: string): Promise<void> => {
-      const allTasks = await getAllTasks();
-      const existing = allTasks.find((t) => t.id === taskId);
+      const existing = tasks.find((t) => t.id === taskId);
       if (!existing) return;
 
       const now = new Date().toISOString();
@@ -80,16 +68,11 @@ export function useTasks() {
         note,
       };
 
-      let reminderFiresAt: string | undefined = existing.reminderFiresAt;
-      let reminderDismissed = existing.reminderDismissed;
-
       const isReminderStatus = newStatus === 'waiting-on-response' || newStatus === 'waiting-on-dependency';
-      if (isReminderStatus && existing.reminderDuration) {
-        reminderFiresAt = computeReminderFiresAt(existing.reminderDuration, new Date()).toISOString();
-        reminderDismissed = false;
-      } else if (!isReminderStatus) {
-        reminderDismissed = true;
-      }
+      const reminderFiresAt = isReminderStatus && existing.reminderDuration
+        ? computeReminderFiresAt(existing.reminderDuration, new Date()).toISOString()
+        : existing.reminderFiresAt;
+      const reminderDismissed = isReminderStatus ? false : true;
 
       const updated: Task = {
         ...existing,
@@ -102,14 +85,14 @@ export function useTasks() {
         history: [...existing.history, historyEntry],
       };
 
-      await putTask(updated);
+      await api.updateTask(updated);
       setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
     },
-    []
+    [tasks]
   );
 
   const removeTask = useCallback(async (taskId: string): Promise<void> => {
-    await deleteTask(taskId);
+    await api.deleteTask(taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
   }, []);
 
@@ -130,10 +113,11 @@ export function useTasks() {
   );
 
   const exportJSON = useCallback(async (): Promise<void> => {
-    const allTasks = await getAllTasks();
-    const blob = new Blob([JSON.stringify({ tasks: allTasks, exportedAt: new Date().toISOString() }, null, 2)], {
-      type: 'application/json',
-    });
+    const allTasks = await api.getAllTasks();
+    const blob = new Blob(
+      [JSON.stringify({ tasks: allTasks, exportedAt: new Date().toISOString() }, null, 2)],
+      { type: 'application/json' }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -147,12 +131,8 @@ export function useTasks() {
     const parsed = JSON.parse(text);
     const imported: Task[] = parsed.tasks ?? parsed;
     if (!Array.isArray(imported)) throw new Error('Invalid import file format');
-
-    await clearAllTasks();
-    for (const task of imported) {
-      await putTask(task);
-    }
-    const fresh = await getAllTasks();
+    await api.importTasks(imported);
+    const fresh = await api.getAllTasks();
     setTasks(fresh);
   }, []);
 
