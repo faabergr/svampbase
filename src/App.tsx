@@ -126,6 +126,7 @@ export default function App() {
         onCardClick={openTask}
         onDismissAlert={dismissAlert}
         onAlertAction={handleAlertAction}
+        onStatusChange={changeTaskStatus}
       />
 
       {modalTask !== undefined && (

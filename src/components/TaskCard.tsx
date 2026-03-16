@@ -4,6 +4,8 @@ import { formatDeadlineRelative, isDeadlineOverdue, isDeadlineSoon, formatRemind
 interface TaskCardProps {
   task: Task;
   onClick: () => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 const STATUS_BORDER: Record<string, string> = {
@@ -15,7 +17,7 @@ const STATUS_BORDER: Record<string, string> = {
   'archived': 'border-slate-600',
 };
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
+export function TaskCard({ task, onClick, onDragStart, onDragEnd }: TaskCardProps) {
   const borderColor = STATUS_BORDER[task.status] ?? 'border-slate-500';
   const contextCount = task.links.length + task.notes.length + task.screenshots.length;
 
@@ -25,8 +27,11 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   return (
     <div
+      draggable
       onClick={onClick}
-      className={`bg-slate-800 border-l-4 ${borderColor} rounded-r-lg p-3 cursor-pointer hover:bg-slate-750 hover:brightness-110 transition-all shadow-sm`}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.(); }}
+      onDragEnd={onDragEnd}
+      className={`bg-slate-800 border-l-4 ${borderColor} rounded-r-lg p-3 cursor-grab active:cursor-grabbing hover:brightness-110 transition-all shadow-sm select-none`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
