@@ -82,6 +82,18 @@ npm run dev
 
 The backend runs on `http://localhost:3001` and manages task storage, Claude session launching, and file uploads. The frontend will show an offline notice for session features if it can't reach the backend, but task management requires it.
 
+### 3. Tests
+
+The backend has a Vitest test suite covering the sessions CRUD layer, terminal command building, and the Express API routes.
+
+```bash
+cd server
+npm test          # run once
+npm run test:watch  # re-run on file changes
+```
+
+All 25 tests run in under a second. No external services or running backend required.
+
 ### Build for production
 
 ```bash

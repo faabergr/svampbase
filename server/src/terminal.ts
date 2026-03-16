@@ -54,10 +54,18 @@ function launch(command: string, cwd: string): void {
   }
 }
 
+const SERVER_PORT = 3001;
+
+function statusCallback(sessionId: string): string {
+  return `curl -s -X PATCH http://localhost:${SERVER_PORT}/sessions/${sessionId} -H 'Content-Type: application/json' -d '{"status":"paused"}'`;
+}
+
 export function launchNewSession(sessionId: string, folderPath: string): void {
-  launch(`claude --session-id ${validateUUID(sessionId)}`, folderPath);
+  const id = validateUUID(sessionId);
+  launch(`claude --session-id ${id}; ${statusCallback(id)}`, folderPath);
 }
 
 export function resumeSession(sessionId: string, folderPath: string): void {
-  launch(`claude --resume ${validateUUID(sessionId)}`, folderPath);
+  const id = validateUUID(sessionId);
+  launch(`claude --resume ${id}; ${statusCallback(id)}`, folderPath);
 }

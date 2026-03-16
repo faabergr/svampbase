@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Session } from './types';
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.SVAMPBASE_DATA_DIR ?? path.join(__dirname, '..', 'data');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
 export const SESSIONS_FOLDER = path.join(__dirname, '..', 'sessions');
 
