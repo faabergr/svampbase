@@ -5,6 +5,7 @@ import type {
   TaskLink,
   TaskNote,
   TaskScreenshot,
+  StatusHistoryEntry,
   ReminderDuration,
 } from '../lib/types';
 import { nanoid, formatRelativeTime, STATUS_LABELS, REMINDER_LABELS, computeReminderFiresAt } from '../lib/utils';
@@ -77,8 +78,11 @@ export function TaskModal({
   // New note form
   const [newNoteContent, setNewNoteContent] = useState('');
 
-  // Status change note
-  const [statusChangeNote, setStatusChangeNote] = useState('');
+  // Pending status change — set when user picks a new status in the dropdown.
+  // The change isn't saved until they click Apply (or Save Changes), so they
+  // can optionally add a note after seeing the new status, not before.
+  const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null);
+  const [pendingNote, setPendingNote] = useState('');
 
   // Related task search
   const [relatedSearch, setRelatedSearch] = useState('');
@@ -97,16 +101,75 @@ export function TaskModal({
   void showImportConfirm;
   void setShowImportConfirm;
 
-  const handleStatusChange = (newStatus: TaskStatus) => {
-    if (!isNew && task && newStatus !== task.status) {
-      onChangeStatus(task.id, newStatus, statusChangeNote || undefined);
-      setStatusChangeNote('');
-    }
+  // Called when the dropdown value changes. For existing tasks we stage the
+  // change so the user can add an optional note before it's committed.
+  const handleDropdownChange = (newStatus: TaskStatus) => {
     setStatus(newStatus);
+    if (!isNew && task && newStatus !== task.status) {
+      setPendingStatus(newStatus);
+      setPendingNote('');
+    } else {
+      setPendingStatus(null);
+    }
+  };
+
+  const applyPendingStatus = () => {
+    if (!task || pendingStatus === null) return;
+    onChangeStatus(task.id, pendingStatus, pendingNote.trim() || undefined);
+    setPendingStatus(null);
+    setPendingNote('');
+  };
+
+  const cancelPendingStatus = () => {
+    // Revert the dropdown to the last saved status.
+    setStatus(task?.status ?? status);
+    setPendingStatus(null);
+    setPendingNote('');
+  };
+
+  // Quick-action buttons (Mark Complete, Archive) save ALL pending local field
+  // changes together with the status transition in one shot, then close. This
+  // avoids the confusion of "did I also need to click Save Changes?".
+  const handleQuickAction = (newStatus: 'completed' | 'archived') => {
+    if (!task) return;
+    const now = new Date().toISOString();
+    const deadlineISO = deadline ? new Date(deadline).toISOString() : undefined;
+    const historyEntry: StatusHistoryEntry = {
+      id: nanoid(),
+      timestamp: now,
+      fromStatus: task.status,
+      toStatus: newStatus,
+    };
+    const updated: Task = {
+      ...task,
+      title: title.trim() || task.title,
+      description,
+      status: newStatus,
+      deadline: deadlineISO,
+      reminderDuration: undefined,
+      reminderFiresAt: undefined,
+      reminderDismissed: true,
+      links,
+      notes,
+      screenshots,
+      relatedTaskIds,
+      completedAt: newStatus === 'completed' ? now : task.completedAt,
+      archivedAt: newStatus === 'archived' ? now : task.archivedAt,
+      updatedAt: now,
+      history: [...task.history, historyEntry],
+    };
+    onSave(updated);
+    onClose();
   };
 
   const handleSave = () => {
     if (!title.trim()) return;
+    // Flush any staged status change before saving the rest of the fields.
+    if (pendingStatus !== null && task) {
+      onChangeStatus(task.id, pendingStatus, pendingNote.trim() || undefined);
+      setPendingStatus(null);
+      setPendingNote('');
+    }
 
     const deadlineISO = deadline ? new Date(deadline).toISOString() : undefined;
     const rd = reminderDuration || undefined;
@@ -266,7 +329,7 @@ export function TaskModal({
                   <label className="block text-slate-300 text-sm font-medium mb-1">Status</label>
                   <select
                     value={status}
-                    onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
+                    onChange={(e) => handleDropdownChange(e.target.value as TaskStatus)}
                     className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                   >
                     {ALL_STATUSES.map((s) => (
@@ -274,15 +337,35 @@ export function TaskModal({
                     ))}
                   </select>
 
-                  {!isNew && (
-                    <div className="mt-2">
-                      <input
-                        type="text"
-                        value={statusChangeNote}
-                        onChange={(e) => setStatusChangeNote(e.target.value)}
-                        placeholder="Optional note for status change..."
-                        className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-1.5 text-slate-100 text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  {pendingStatus !== null && (
+                    <div className="mt-2 bg-slate-900/60 border border-slate-600 rounded p-3 space-y-2">
+                      <textarea
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                        value={pendingNote}
+                        onChange={(e) => setPendingNote(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyPendingStatus(); }
+                          if (e.key === 'Escape') cancelPendingStatus();
+                        }}
+                        placeholder="Why this change? (optional)"
+                        rows={2}
+                        className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-slate-100 text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
                       />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={applyPendingStatus}
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-3 py-1.5 rounded transition-colors"
+                        >
+                          Apply
+                        </button>
+                        <button
+                          onClick={cancelPendingStatus}
+                          className="text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -314,25 +397,30 @@ export function TaskModal({
                 </div>
 
                 {!isNew && task && (
-                  <div className="pt-2 border-t border-slate-700 flex gap-3">
-                    <button
-                      onClick={() => handleStatusChange('completed')}
-                      className="flex-1 bg-green-800 hover:bg-green-700 text-green-100 text-sm py-2 rounded transition-colors"
-                    >
-                      Mark Complete
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange('archived')}
-                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm py-2 rounded transition-colors"
-                    >
-                      Archive
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="bg-red-900 hover:bg-red-800 text-red-200 text-sm px-3 py-2 rounded transition-colors"
-                    >
-                      Delete
-                    </button>
+                  <div className="pt-2 border-t border-slate-700 space-y-2">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleQuickAction('completed')}
+                        className="flex-1 bg-green-800 hover:bg-green-700 text-green-100 text-sm py-2 rounded transition-colors"
+                        title="Saves all changes and marks complete"
+                      >
+                        Mark Complete
+                      </button>
+                      <button
+                        onClick={() => handleQuickAction('archived')}
+                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm py-2 rounded transition-colors"
+                        title="Saves all changes and archives"
+                      >
+                        Archive
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="bg-red-900 hover:bg-red-800 text-red-200 text-sm px-3 py-2 rounded transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">Mark Complete and Archive save all changes immediately.</p>
                   </div>
                 )}
               </div>
@@ -728,20 +816,22 @@ export function TaskModal({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-slate-700 px-5 py-4 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!title.trim()}
-              className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
-            >
-              {isNew ? 'Create Task' : 'Save Changes'}
-            </button>
+          <div className="border-t border-slate-700 px-5 py-4 flex items-center justify-end gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm transition-colors"
+              >
+                {isNew ? 'Cancel' : 'Close'}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!title.trim()}
+                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+              >
+                {isNew ? 'Create Task' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

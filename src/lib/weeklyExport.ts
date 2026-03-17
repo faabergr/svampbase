@@ -113,7 +113,8 @@ export function generateWeeklySummary(tasks: Task[], days = 7, journalEntries: J
   lines.push(`# What I worked on — ${rangeLabel(cutoff, now)}`);
   lines.push('');
 
-  if (completed.length === 0 && archived.length === 0 && inFlight.length === 0) {
+  const journalInWindow = journalEntries.filter((e) => new Date(e.createdAt) >= cutoff);
+  if (completed.length === 0 && archived.length === 0 && inFlight.length === 0 && journalInWindow.length === 0) {
     lines.push('_No activity in this period._');
     return lines.join('\n');
   }
