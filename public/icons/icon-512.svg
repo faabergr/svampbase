@@ -1,4 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background tile -->
   <rect width="512" height="512" rx="80" fill="#1e293b"/>
-  <text x="256" y="330" font-family="sans-serif" font-size="280" font-weight="bold" text-anchor="middle" fill="#60a5fa">S</text>
+
+  <!-- Sponge body -->
+  <rect x="72" y="156" width="368" height="240" rx="48" fill="#f59e0b"/>
+  <!-- Top highlight -->
+  <rect x="72" y="156" width="368" height="96" rx="48" fill="#fbbf24"/>
+  <rect x="72" y="204" width="368" height="48" fill="#fbbf24"/>
+
+  <!-- Pores -->
+  <circle cx="148" cy="228" r="20" fill="#92400e" opacity="0.7"/>
+  <circle cx="228" cy="200" r="16" fill="#92400e" opacity="0.7"/>
+  <circle cx="308" cy="232" r="22" fill="#92400e" opacity="0.7"/>
+  <circle cx="390" cy="208" r="16" fill="#92400e" opacity="0.7"/>
+
+  <circle cx="112" cy="296" r="16" fill="#92400e" opacity="0.7"/>
+  <circle cx="192" cy="312" r="22" fill="#92400e" opacity="0.7"/>
+  <circle cx="272" cy="292" r="16" fill="#92400e" opacity="0.7"/>
+  <circle cx="348" cy="316" r="20" fill="#92400e" opacity="0.7"/>
+  <circle cx="424" cy="288" r="14" fill="#92400e" opacity="0.7"/>
+
+  <circle cx="156" cy="364" r="14" fill="#92400e" opacity="0.7"/>
+  <circle cx="256" cy="372" r="20" fill="#92400e" opacity="0.7"/>
+  <circle cx="344" cy="360" r="16" fill="#92400e" opacity="0.7"/>
+
+  <!-- Outline -->
+  <rect x="72" y="156" width="368" height="240" rx="48" fill="none" stroke="#d97706" stroke-width="6"/>
 </svg>
