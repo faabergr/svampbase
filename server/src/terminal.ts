@@ -11,10 +11,15 @@ function escapeAppleScript(s: string): string {
 }
 
 function launchDarwin(command: string, cwd: string): void {
+  // The entire shell command must be escaped for AppleScript's double-quoted string
+  // context. Without this, double quotes inside the curl status-callback JSON
+  // (e.g. '{"status":"paused"}') prematurely close the do script string and
+  // osascript exits with a syntax error.
+  const shellCmd = `cd '${cwd}' && ${command}`;
   execFileSync('osascript', [
     '-e', 'tell application "Terminal"',
     '-e', 'activate',
-    '-e', `do script "cd '${escapeAppleScript(cwd)}' && ${command}"`,
+    '-e', `do script "${escapeAppleScript(shellCmd)}"`,
     '-e', 'end tell',
   ]);
 }
