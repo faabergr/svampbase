@@ -43,6 +43,16 @@ From any task, open the **Sessions** tab to create a Claude Code session tied to
 - Pause, resume, and end sessions
 - See all active sessions across tasks from the Sessions panel in the header
 
+### Daily standup digest
+
+The **Standup** button in the header opens a digest panel for your morning standup. Three sections at a glance:
+
+- **Worked on yesterday** — tasks with status changes yesterday, plus anything that's been in-progress since before today
+- **Reminders firing** — undismissed boomerang reminders that are due or overdue
+- **Overdue** — tasks with a past deadline, sorted by most overdue first
+
+Click any task to open it directly.
+
 ### Weekly summary
 
 The **This week** button exports a Markdown file of everything you worked on in the last 7 days — completed tasks, archived tasks, and what's still in flight. Each entry includes links, notes, duration, and status journey. Useful as brag-sheet material, self-review input, or context to hand to Claude.
@@ -84,7 +94,7 @@ The backend runs on `http://localhost:3001` and manages task storage, Claude ses
 
 ### 3. Tests
 
-The backend has a Vitest test suite covering the sessions CRUD layer, terminal command building, and the Express API routes.
+**Backend** — covers the sessions CRUD layer, terminal command building, and the Express API routes:
 
 ```bash
 cd server
@@ -92,7 +102,14 @@ npm test          # run once
 npm run test:watch  # re-run on file changes
 ```
 
-All 25 tests run in under a second. No external services or running backend required.
+**Frontend** — covers task modal interactions, utility functions, weekly export logic, and the standup digest:
+
+```bash
+npm test          # run once
+npm run test:watch  # re-run on file changes
+```
+
+All tests run in under a second. No external services or running backend required.
 
 ### Build for production
 

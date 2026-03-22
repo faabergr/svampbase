@@ -12,6 +12,7 @@ import { SearchModal } from './components/SearchModal';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { SessionsPanel } from './components/SessionsPanel';
 import { JournalPanel } from './components/JournalPanel';
+import { StandupPanel } from './components/StandupPanel';
 
 export default function App() {
   const {
@@ -37,6 +38,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState(false);
   const [showSessionsPanel, setShowSessionsPanel] = useState(false);
   const [showJournalPanel, setShowJournalPanel] = useState(false);
+  const [showStandupPanel, setShowStandupPanel] = useState(false);
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -109,6 +111,7 @@ export default function App() {
         onExport={exportJSON}
         onWeeklySummary={() => exportWeeklySummary(7, journalEntries)}
         onJournalClick={() => setShowJournalPanel((v) => !v)}
+        onStandupClick={() => setShowStandupPanel((v) => !v)}
         onImport={handleImportRequest}
         onNewTask={openNewTask}
         onSessionsClick={() => setShowSessionsPanel((v) => !v)}
@@ -192,6 +195,14 @@ export default function App() {
           onClose={() => setShowJournalPanel(false)}
           onOpenTask={openTask}
           allTasks={tasks}
+        />
+      )}
+
+      {showStandupPanel && (
+        <StandupPanel
+          tasks={tasks}
+          onClose={() => setShowStandupPanel(false)}
+          onOpenTask={(task) => { setShowStandupPanel(false); openTask(task); }}
         />
       )}
     </div>

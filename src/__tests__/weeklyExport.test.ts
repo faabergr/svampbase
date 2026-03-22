@@ -24,10 +24,6 @@ function daysAgo(n: number): string {
   return new Date(Date.now() - n * 86_400_000).toISOString();
 }
 
-function daysFromNow(n: number): string {
-  return new Date(Date.now() + n * 86_400_000).toISOString();
-}
-
 // ---------- empty state ----------
 
 describe('generateWeeklySummary — empty', () => {

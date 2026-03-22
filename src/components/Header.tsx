@@ -8,10 +8,11 @@ interface HeaderProps {
   onSessionsClick: () => void;
   onWeeklySummary: () => void;
   onJournalClick: () => void;
+  onStandupClick: () => void;
   hasActiveSessions?: boolean;
 }
 
-export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onJournalClick, hasActiveSessions }: HeaderProps) {
+export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onJournalClick, onStandupClick, hasActiveSessions }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,6 +74,17 @@ export function Header({ onSearchClick, onExport, onImport, onNewTask, onSession
             <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
           )}
           Sessions
+        </button>
+
+        <button
+          onClick={onStandupClick}
+          className="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-1.5"
+          title="Daily standup digest"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+          </svg>
+          <span className="hidden sm:inline">Standup</span>
         </button>
 
         <button
