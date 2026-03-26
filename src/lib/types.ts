@@ -54,6 +54,7 @@ export interface Task {
   history: StatusHistoryEntry[];
   completedAt?: string;
   archivedAt?: string;
+  tags?: string[];
 }
 
 export interface Alert {

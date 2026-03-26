@@ -43,12 +43,14 @@ function defaultProps(task: Task | null = makeTask()) {
   return {
     task,
     allTasks: task ? [task] : [],
+    allTags: [],
     onSave: vi.fn(),
     onCreate: vi.fn(),
     onDelete: vi.fn(),
     onChangeStatus: vi.fn(),
     onClose: vi.fn(),
     onOpenTask: vi.fn(),
+    onTagClick: vi.fn(),
   };
 }
 

@@ -19,12 +19,14 @@ type Tab = 'details' | 'context' | 'history' | 'related' | 'sessions';
 interface TaskModalProps {
   task: Task | null; // null = create mode
   allTasks: Task[];
+  allTags: string[];
   onSave: (task: Task) => void;
   onCreate: (partial: Partial<Task> & { title: string }) => void;
   onDelete: (taskId: string) => void;
   onChangeStatus: (taskId: string, status: TaskStatus, note?: string) => void;
   onClose: () => void;
   onOpenTask: (task: Task) => void;
+  onTagClick: (tag: string) => void;
 }
 
 const ALL_STATUSES: TaskStatus[] = [
@@ -48,12 +50,14 @@ const STATUS_COLORS: Record<string, string> = {
 export function TaskModal({
   task,
   allTasks,
+  allTags,
   onSave,
   onCreate,
   onDelete,
   onChangeStatus,
   onClose,
   onOpenTask,
+  onTagClick,
 }: TaskModalProps) {
   const isNew = task === null;
 
@@ -69,6 +73,9 @@ export function TaskModal({
   const [notes, setNotes] = useState<TaskNote[]>(task?.notes ?? []);
   const [screenshots, setScreenshots] = useState<TaskScreenshot[]>(task?.screenshots ?? []);
   const [relatedTaskIds, setRelatedTaskIds] = useState<string[]>(task?.relatedTaskIds ?? []);
+  const [tags, setTags] = useState<string[]>(task?.tags ?? []);
+  const [tagInput, setTagInput] = useState('');
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
 
   // New link form
   const [newLinkType, setNewLinkType] = useState<TaskLink['type']>('url');
@@ -153,6 +160,7 @@ export function TaskModal({
       notes,
       screenshots,
       relatedTaskIds,
+      tags,
       completedAt: newStatus === 'completed' ? now : task.completedAt,
       archivedAt: newStatus === 'archived' ? now : task.archivedAt,
       updatedAt: now,
@@ -185,6 +193,7 @@ export function TaskModal({
         notes,
         screenshots,
         relatedTaskIds,
+        tags,
       });
     } else {
       const now = new Date().toISOString();
@@ -205,6 +214,7 @@ export function TaskModal({
         notes,
         screenshots,
         relatedTaskIds,
+        tags,
         updatedAt: now,
       };
       onSave(updated);
@@ -394,6 +404,94 @@ export function TaskModal({
                     onChange={(e) => setDeadline(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
                   />
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-slate-300 text-sm font-medium mb-1">Tags</label>
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {tags.map((tag) => (
+                        <span key={tag} className="flex items-center gap-1 bg-slate-700 text-slate-200 text-xs px-2 py-0.5 rounded-full">
+                          <button
+                            type="button"
+                            onClick={() => onTagClick(tag)}
+                            className="hover:text-blue-300 transition-colors"
+                          >
+                            {tag}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                            className="text-slate-400 hover:text-red-400 transition-colors leading-none"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => { setTagInput(e.target.value); setShowTagSuggestions(true); }}
+                      onFocus={() => setShowTagSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowTagSuggestions(false), 150)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          const val = tagInput.trim().toLowerCase();
+                          if (val && !tags.includes(val)) setTags((prev) => [...prev, val]);
+                          setTagInput('');
+                          setShowTagSuggestions(false);
+                        }
+                      }}
+                      placeholder="Add tag, press Enter"
+                      className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-slate-100 text-sm placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    {showTagSuggestions && tagInput.trim() === '' && allTags.filter((t) => !tags.includes(t)).length > 0 && (
+                      <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-lg max-h-40 overflow-y-auto">
+                        {allTags.filter((t) => !tags.includes(t)).map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onMouseDown={() => {
+                              setTags((prev) => [...prev, t]);
+                              setTagInput('');
+                              setShowTagSuggestions(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {showTagSuggestions && tagInput.trim() !== '' && (() => {
+                      const q = tagInput.trim().toLowerCase();
+                      const matches = allTags.filter((t) => !tags.includes(t) && t.includes(q));
+                      if (!matches.length) return null;
+                      return (
+                        <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-lg max-h-40 overflow-y-auto">
+                          {matches.map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onMouseDown={() => {
+                                setTags((prev) => [...prev, t]);
+                                setTagInput('');
+                                setShowTagSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {!isNew && task && (

@@ -13,6 +13,8 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { SessionsPanel } from './components/SessionsPanel';
 import { JournalPanel } from './components/JournalPanel';
 import { StandupPanel } from './components/StandupPanel';
+import { TimelinePanel } from './components/TimelinePanel';
+import { TagPanel } from './components/TagPanel';
 
 export default function App() {
   const {
@@ -39,6 +41,10 @@ export default function App() {
   const [showSessionsPanel, setShowSessionsPanel] = useState(false);
   const [showJournalPanel, setShowJournalPanel] = useState(false);
   const [showStandupPanel, setShowStandupPanel] = useState(false);
+  const [showTimelinePanel, setShowTimelinePanel] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+  const allTags = Array.from(new Set(tasks.flatMap((t) => t.tags ?? []))).sort();
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -112,6 +118,7 @@ export default function App() {
         onWeeklySummary={() => exportWeeklySummary(7, journalEntries)}
         onJournalClick={() => setShowJournalPanel((v) => !v)}
         onStandupClick={() => setShowStandupPanel((v) => !v)}
+        onTimelineClick={() => setShowTimelinePanel((v) => !v)}
         onImport={handleImportRequest}
         onNewTask={openNewTask}
         onSessionsClick={() => setShowSessionsPanel((v) => !v)}
@@ -141,12 +148,14 @@ export default function App() {
         <TaskModal
           task={modalTask}
           allTasks={tasks}
+          allTags={allTags}
           onSave={handleSaveTask}
           onCreate={createTask}
           onDelete={removeTask}
           onChangeStatus={changeTaskStatus}
           onClose={closeModal}
           onOpenTask={openTask}
+          onTagClick={(tag) => { closeModal(); setActiveTag(tag); }}
         />
       )}
 
@@ -203,6 +212,23 @@ export default function App() {
           tasks={tasks}
           onClose={() => setShowStandupPanel(false)}
           onOpenTask={(task) => { setShowStandupPanel(false); openTask(task); }}
+        />
+      )}
+
+      {showTimelinePanel && (
+        <TimelinePanel
+          tasks={tasks}
+          onClose={() => setShowTimelinePanel(false)}
+          onOpenTask={(task) => { setShowTimelinePanel(false); openTask(task); }}
+        />
+      )}
+
+      {activeTag !== null && (
+        <TagPanel
+          tag={activeTag}
+          tasks={tasks}
+          onClose={() => setActiveTag(null)}
+          onOpenTask={(task) => { setActiveTag(null); openTask(task); }}
         />
       )}
     </div>
