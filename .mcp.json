@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "svampbase": {
+      "type": "stdio",
+      "command": "server/node_modules/.bin/tsx",
+      "args": ["server/src/mcp.ts"]
+    }
+  }
+}
