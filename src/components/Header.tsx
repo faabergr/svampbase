@@ -10,9 +10,12 @@ interface HeaderProps {
   onJournalClick: () => void;
   onStandupClick: () => void;
   hasActiveSessions?: boolean;
+  focusedTaskId?: string | null;
+  focusedTaskTitle?: string | null;
+  onClearFocus?: () => void;
 }
 
-export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onJournalClick, onStandupClick, hasActiveSessions }: HeaderProps) {
+export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onJournalClick, onStandupClick, hasActiveSessions, focusedTaskId, focusedTaskTitle, onClearFocus }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,6 +47,21 @@ export function Header({ onSearchClick, onExport, onImport, onNewTask, onSession
       <div className="flex items-center gap-3">
         <span className="text-blue-400 font-bold text-xl tracking-tight">Svampbase</span>
         <span className="text-slate-500 text-sm hidden sm:inline">Task Tracker</span>
+        {focusedTaskId && (
+          <span className="hidden md:flex items-center gap-1.5 bg-blue-950 border border-blue-800 text-blue-300 text-xs px-2.5 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+            <span className="truncate max-w-48">{focusedTaskTitle ?? focusedTaskId}</span>
+            {onClearFocus && (
+              <button
+                onClick={onClearFocus}
+                className="text-blue-500 hover:text-blue-200 ml-0.5 leading-none transition-colors"
+                title="Clear focus"
+              >
+                ×
+              </button>
+            )}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

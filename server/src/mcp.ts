@@ -2,8 +2,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { getAllTasks, getTask, upsertTask, generateTaskId } from './tasks';
-import { getAllSessions, getSession } from './sessions';
+import { getAllSessions, getSession, upsertSession, createSessionFolder } from './sessions';
 import { getAllEntries, upsertEntry } from './journal';
+import { getFocus, setFocus, clearFocus } from './focus';
+import fs from 'fs';
+import path from 'path';
 
 const TASK_STATUSES = [
   'in-progress',
@@ -176,6 +179,105 @@ server.tool(
     const entry = { id: crypto.randomUUID(), content: content.trim(), createdAt: now, updatedAt: now };
     upsertEntry(entry);
     return { content: [{ type: 'text' as const, text: JSON.stringify(entry, null, 2) }] };
+  },
+);
+
+// ── Focus ────────────────────────────────────────────────────────────────────
+
+server.tool(
+  'get_focus',
+  'Get the currently focused task, including full task details and workspace path. Call this at the start of every conversation to understand what you should be working on.',
+  {},
+  async () => {
+    const focus = getFocus();
+    const task = focus.taskId ? getTask(focus.taskId) : null;
+    const sessionId = task?.sessionId as string | undefined;
+    const session = sessionId ? getSession(sessionId) : undefined;
+    const workspacePath = session?.folderPath ?? null;
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ taskId: focus.taskId, task: task ?? null, workspacePath }, null, 2),
+      }],
+    };
+  },
+);
+
+server.tool(
+  'set_focus',
+  "Set the focused task. Use this when starting work on a specific task. Returns the task and its workspace path.",
+  { taskId: z.string().describe('Task ID to focus on, e.g. TASK-001') },
+  async ({ taskId }) => {
+    const task = getTask(taskId);
+    if (!task) return { content: [{ type: 'text' as const, text: `Task ${taskId} not found` }], isError: true };
+    setFocus(taskId);
+    const sessionId = task.sessionId as string | undefined;
+    const session = sessionId ? getSession(sessionId) : undefined;
+    const workspacePath = session?.folderPath ?? null;
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ taskId, task, workspacePath }, null, 2),
+      }],
+    };
+  },
+);
+
+server.tool(
+  'clear_focus',
+  'Clear the current focus. Use this when done with the focused task or switching contexts.',
+  {},
+  async () => {
+    clearFocus();
+    return { content: [{ type: 'text' as const, text: 'Focus cleared.' }] };
+  },
+);
+
+server.tool(
+  'get_workspace_path',
+  'Get (or lazily create) the workspace folder path for a task. Use this to know where to put files for a task. Creates a session and folder if none exists yet.',
+  { taskId: z.string().describe('Task ID, e.g. TASK-001') },
+  async ({ taskId }) => {
+    const task = getTask(taskId);
+    if (!task) return { content: [{ type: 'text' as const, text: `Task ${taskId} not found` }], isError: true };
+
+    const existingSessionId = task.sessionId as string | undefined;
+    if (existingSessionId) {
+      const existing = getSession(existingSessionId);
+      if (existing) {
+        return { content: [{ type: 'text' as const, text: JSON.stringify({ taskId, workspacePath: existing.folderPath }, null, 2) }] };
+      }
+    }
+
+    // Lazily provision session + folder
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const taskTitle = String(task.title ?? '');
+    const safeName = taskTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const sessionName = safeName
+      ? `${safeName}-${taskId.toLowerCase()}-${id.slice(0, 8)}`
+      : `${taskId.toLowerCase()}-${id.slice(0, 8)}`;
+    const folderPath = createSessionFolder(id, sessionName);
+
+    const session = { id, name: sessionName, status: 'active' as const, taskIds: [taskId], folderPath, createdAt: now, updatedAt: now };
+    upsertSession(session);
+
+    // Write CLAUDE.md
+    const description = String(task.description ?? '').trim();
+    const claudeLines = [
+      `# Task: ${taskTitle} (${taskId})`,
+      '',
+      ...(description ? [description, ''] : []),
+      '---',
+      '',
+      'At the start of every conversation in this folder, call the `get_focus` MCP tool',
+      'to retrieve the current task status, history, and notes before doing any work.',
+    ];
+    fs.writeFileSync(path.join(folderPath, 'CLAUDE.md'), claudeLines.join('\n'), 'utf-8');
+
+    upsertTask({ ...task, sessionId: id, updatedAt: now });
+
+    return { content: [{ type: 'text' as const, text: JSON.stringify({ taskId, workspacePath: folderPath }, null, 2) }] };
   },
 );
 

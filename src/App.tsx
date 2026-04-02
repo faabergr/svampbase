@@ -4,6 +4,7 @@ import { useTasks } from './hooks/useTasks';
 import { useJournal } from './hooks/useJournal';
 import { useReminders } from './hooks/useReminders';
 import { useSessions } from './hooks/useSessions';
+import { useFocus } from './hooks/useFocus';
 import { useBackendStatus } from './hooks/useBackendStatus';
 import { Header } from './components/Header';
 import { Board } from './components/Board';
@@ -34,6 +35,8 @@ export default function App() {
   const { alerts, dismissAlert } = useReminders(tasks);
   const { sessions } = useSessions();
   const hasActiveSessions = sessions.some((s) => s.status === 'active');
+  const { focus, clearFocus } = useFocus();
+  const focusedTask = focus?.taskId ? tasks.find((t) => t.id === focus.taskId) : null;
   const backendStatus = useBackendStatus();
 
   const [modalTask, setModalTask] = useState<Task | null | undefined>(undefined); // undefined = closed, null = new
@@ -123,6 +126,9 @@ export default function App() {
         onNewTask={openNewTask}
         onSessionsClick={() => setShowSessionsPanel((v) => !v)}
         hasActiveSessions={hasActiveSessions}
+        focusedTaskId={focusedTask?.id}
+        focusedTaskTitle={focusedTask ? `${focusedTask.id} · ${focusedTask.title}` : null}
+        onClearFocus={() => void clearFocus()}
       />
 
       {backendStatus === 'offline' && (

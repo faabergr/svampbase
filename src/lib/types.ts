@@ -55,6 +55,7 @@ export interface Task {
   completedAt?: string;
   archivedAt?: string;
   tags?: string[];
+  sessionId?: string; // UUID of the 1:1 workspace session for this task
 }
 
 export interface Alert {

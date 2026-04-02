@@ -7,6 +7,7 @@ import multer from 'multer';
 import { getAllSessions, getSession, upsertSession, deleteSession, createSessionFolder, SESSIONS_FOLDER } from './sessions';
 import { getAllTasks, getTask, upsertTask, deleteTask as deleteTaskStore, replaceAllTasks, generateTaskId } from './tasks';
 import { getAllEntries, getEntry, upsertEntry, deleteEntry } from './journal';
+import { getFocus, setFocus, clearFocus } from './focus';
 import { launchNewSession, resumeSession } from './terminal';
 import type { Session, SessionStatus, SessionFile } from './types';
 
@@ -270,6 +271,94 @@ app.post('/tasks/import', (req, res) => {
   res.json({ imported: tasks.length });
 });
 
+app.post('/tasks/:id/session', (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) { res.status(404).json({ error: 'Task not found' }); return; }
+
+  const { launch } = req.body as { launch?: boolean };
+
+  // Return existing session if valid
+  const existingSessionId = task.sessionId as string | undefined;
+  if (existingSessionId) {
+    const existing = getSession(existingSessionId);
+    if (existing) {
+      writeTaskClaudeMd(existing.folderPath, task);
+      if (launch) {
+        try {
+          const isFirstLaunch = !existing.lastLaunchedAt;
+          const now = new Date().toISOString();
+          if (isFirstLaunch) {
+            launchNewSession(existing.id, existing.folderPath);
+          } else {
+            resumeSession(existing.id, existing.folderPath);
+          }
+          upsertSession({ ...existing, status: 'active', lastLaunchedAt: now, updatedAt: now });
+        } catch (err) {
+          console.error('Terminal launch failed:', err);
+        }
+      }
+      return res.json({ task, session: getSession(existingSessionId) });
+    }
+  }
+
+  // Provision a new session for this task
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+  const taskTitle = String(task.title ?? '');
+  const taskId = String(task.id);
+  const safeName = taskTitle
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const sessionName = safeName ? `${safeName}-${taskId.toLowerCase()}-${id.slice(0, 8)}` : `${taskId.toLowerCase()}-${id.slice(0, 8)}`;
+  const folderPath = createSessionFolder(id, sessionName);
+
+  const session: Session = {
+    id,
+    name: sessionName,
+    status: 'active',
+    taskIds: [taskId],
+    folderPath,
+    createdAt: now,
+    updatedAt: now,
+  };
+  upsertSession(session);
+
+  writeTaskClaudeMd(folderPath, task);
+
+  const updatedTask = { ...task, sessionId: id, updatedAt: now };
+  upsertTask(updatedTask);
+
+  if (launch) {
+    try {
+      launchNewSession(session.id, session.folderPath);
+      const launched = { ...session, lastLaunchedAt: now };
+      upsertSession(launched);
+      return res.status(201).json({ task: updatedTask, session: launched });
+    } catch (err) {
+      console.error('Terminal launch failed:', err);
+    }
+  }
+
+  res.status(201).json({ task: updatedTask, session });
+});
+
+function writeTaskClaudeMd(folderPath: string, task: { id: string; title?: unknown; description?: unknown }): void {
+  const title = String(task.title ?? '');
+  const description = String(task.description ?? '').trim();
+  const lines = [
+    `# Task: ${title} (${task.id})`,
+    '',
+    ...(description ? [description, ''] : []),
+    '---',
+    '',
+    'At the start of every conversation in this folder, call the `get_focus` MCP tool',
+    'to retrieve the current task status, history, and notes before doing any work.',
+  ];
+  fs.writeFileSync(path.join(folderPath, 'CLAUDE.md'), lines.join('\n'), 'utf-8');
+}
+
 // --- Journal ---
 
 app.get('/journal', (_req, res) => {
@@ -305,6 +394,25 @@ app.delete('/journal/:id', (req, res) => {
   const deleted = deleteEntry(req.params.id);
   if (!deleted) { res.status(404).json({ error: 'Entry not found' }); return; }
   res.status(204).send();
+});
+
+// --- Focus ---
+
+app.get('/focus', (_req, res) => {
+  res.json(getFocus());
+});
+
+app.put('/focus', (req, res) => {
+  const { taskId } = req.body as { taskId?: string };
+  if (!taskId) { res.status(400).json({ error: 'taskId is required' }); return; }
+  if (!getTask(taskId)) { res.status(404).json({ error: 'Task not found' }); return; }
+  setFocus(taskId);
+  res.json(getFocus());
+});
+
+app.delete('/focus', (_req, res) => {
+  clearFocus();
+  res.json(getFocus());
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
