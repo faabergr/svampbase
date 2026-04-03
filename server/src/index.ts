@@ -10,6 +10,9 @@ import { getAllEntries, getEntry, upsertEntry, deleteEntry } from './journal';
 import { getFocus, setFocus, clearFocus } from './focus';
 import { launchNewSession, resumeSession } from './terminal';
 import type { Session, SessionStatus, SessionFile } from './types';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { registerMcpTools, errMsg } from './mcpTools';
 
 const app = express();
 const PORT = 3001;
@@ -420,6 +423,16 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 export { app };
 
 if (!process.env.VITEST) {
+  const mcpServer = new McpServer({ name: 'svampbase', version: '0.1.0' });
+  registerMcpTools(mcpServer);
+  const mcpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  app.all('/mcp', async (req, res) => {
+    await mcpTransport.handleRequest(req, res, req.body);
+  });
+  mcpServer.connect(mcpTransport).catch((err: unknown) => {
+    process.stderr.write(`MCP transport error: ${errMsg(err)}\n`);
+  });
+
   app.listen(PORT, () => {
     console.log(`Svampbase server running on http://localhost:${PORT}`);
   });

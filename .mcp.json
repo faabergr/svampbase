@@ -1,12 +1,8 @@
 {
   "mcpServers": {
     "svampbase": {
-      "type": "stdio",
-      "command": "server/node_modules/.bin/tsx",
-      "args": ["server/src/mcp.ts"],
-      "env": {
-        "NODE_NO_WARNINGS": "1"
-      }
+      "type": "http",
+      "url": "http://localhost:3001/mcp"
     }
   }
 }
