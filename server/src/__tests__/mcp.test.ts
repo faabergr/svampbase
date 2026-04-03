@@ -18,10 +18,6 @@ vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: vi.fn(() => mockServer),
 }));
 
-vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: vi.fn(() => ({})),
-}));
-
 // --- mock tasks ---
 const mockTaskStore = vi.hoisted(() => new Map<string, StoredTask>());
 let mockNextTaskId = vi.hoisted(() => ({ value: 'TASK-001' }));
@@ -49,8 +45,9 @@ vi.mock('../journal', () => ({
   upsertEntry: vi.fn((e: StoredJournalEntry) => { mockJournalStore.set(e.id, e); return e; }),
 }));
 
-// Import mcp.ts — this registers all tool handlers as a side effect
-await import('../mcp');
+// Import mcpTools and register tools using the mock server
+const { registerMcpTools } = await import('../mcpTools');
+registerMcpTools(mockServer as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
