@@ -3,7 +3,10 @@
     "svampbase": {
       "type": "stdio",
       "command": "server/node_modules/.bin/tsx",
-      "args": ["server/src/mcp.ts"]
+      "args": ["server/src/mcp.ts"],
+      "env": {
+        "NODE_NO_WARNINGS": "1"
+      }
     }
   }
 }
