@@ -423,14 +423,17 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 export { app };
 
 if (!process.env.VITEST) {
-  const mcpServer = new McpServer({ name: 'svampbase', version: '0.1.0' });
-  registerMcpTools(mcpServer);
-  const mcpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   app.all('/mcp', async (req, res) => {
-    await mcpTransport.handleRequest(req, res, req.body);
-  });
-  mcpServer.connect(mcpTransport).catch((err: unknown) => {
-    process.stderr.write(`MCP transport error: ${errMsg(err)}\n`);
+    try {
+      const mcpServer = new McpServer({ name: 'svampbase', version: '0.1.0' });
+      registerMcpTools(mcpServer);
+      const mcpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      await mcpServer.connect(mcpTransport);
+      await mcpTransport.handleRequest(req, res, req.body);
+    } catch (err) {
+      process.stderr.write(`MCP request error: ${errMsg(err)}\n`);
+      if (!res.headersSent) res.status(500).json({ error: errMsg(err) });
+    }
   });
 
   app.listen(PORT, () => {
