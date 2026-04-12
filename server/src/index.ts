@@ -347,6 +347,10 @@ app.post('/tasks/:id/session', (req, res) => {
   res.status(201).json({ task: updatedTask, session });
 });
 
+const MCP_JSON = JSON.stringify({
+  mcpServers: { svampbase: { type: 'http', url: 'http://localhost:3001/mcp' } },
+}, null, 2);
+
 function writeTaskClaudeMd(folderPath: string, task: { id: string; title?: unknown; description?: unknown }): void {
   const title = String(task.title ?? '');
   const description = String(task.description ?? '').trim();
@@ -356,10 +360,11 @@ function writeTaskClaudeMd(folderPath: string, task: { id: string; title?: unkno
     ...(description ? [description, ''] : []),
     '---',
     '',
-    'At the start of every conversation in this folder, call the `get_focus` MCP tool',
-    'to retrieve the current task status, history, and notes before doing any work.',
+    `At the start of every conversation in this folder, call the \`get_task\` MCP tool`,
+    `with id="${task.id}" to retrieve the current task status, history, and notes before doing any work.`,
   ];
   fs.writeFileSync(path.join(folderPath, 'CLAUDE.md'), lines.join('\n'), 'utf-8');
+  fs.writeFileSync(path.join(folderPath, '.mcp.json'), MCP_JSON, 'utf-8');
 }
 
 // --- Journal ---
@@ -423,16 +428,30 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 export { app };
 
 if (!process.env.VITEST) {
-  app.all('/mcp', async (req, res) => {
+  // One McpServer+transport per session so concurrent Claude instances don't collide.
+  const mcpSessions = new Map<string, { server: McpServer; transport: StreamableHTTPServerTransport }>();
+
+  app.all('/mcp', async (req, res, next) => {
     try {
-      const mcpServer = new McpServer({ name: 'svampbase', version: '0.1.0' });
-      registerMcpTools(mcpServer);
-      const mcpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-      await mcpServer.connect(mcpTransport);
-      await mcpTransport.handleRequest(req, res, req.body);
-    } catch (err) {
-      process.stderr.write(`MCP request error: ${errMsg(err)}\n`);
-      if (!res.headersSent) res.status(500).json({ error: errMsg(err) });
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+      if (sessionId) {
+        const session = mcpSessions.get(sessionId);
+        if (!session) { res.status(404).json({ error: 'MCP session not found' }); return; }
+        await session.transport.handleRequest(req, res, req.body);
+      } else {
+        const id = crypto.randomUUID();
+        const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => id });
+        const server = new McpServer({ name: 'svampbase', version: '0.1.0' });
+        registerMcpTools(server);
+        transport.onclose = () => mcpSessions.delete(id);
+        await server.connect(transport);
+        mcpSessions.set(id, { server, transport });
+        await transport.handleRequest(req, res, req.body);
+      }
+    } catch (err: unknown) {
+      process.stderr.write(`MCP handleRequest error: ${errMsg(err)}\n`);
+      next(err);
     }
   });
 

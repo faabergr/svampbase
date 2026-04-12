@@ -103,7 +103,9 @@ export function TaskModal({
   const { sessions, loading: sessionsLoading, error: sessionsError, createSession, updateSession: updateSessionHook, launchSession, refresh: refreshSessions } = useSessions(task?.id);
   const { focus, setFocus, clearFocus: clearFocusHook } = useFocus();
   const isFocused = !!task && focus?.taskId === task.id;
-  const [newSessionName, setNewSessionName] = useState('');
+  const [newSessionName, setNewSessionName] = useState(() =>
+    task?.title?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ?? ''
+  );
   const [newSessionNotes, setNewSessionNotes] = useState('');
   const [newSessionLaunch, setNewSessionLaunch] = useState(false);
 
@@ -928,7 +930,7 @@ export function TaskModal({
                             notes: newSessionNotes.trim() || undefined,
                             launch: newSessionLaunch,
                           });
-                          setNewSessionName('');
+                          setNewSessionName(task.title?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ?? '');
                           setNewSessionNotes('');
                           setNewSessionLaunch(false);
                         }}
