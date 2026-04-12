@@ -71,4 +71,28 @@ export function deleteSessionFile(sessionId: string, filename: string): Promise<
   return apiFetch<void>(`/sessions/${sessionId}/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
 }
 
+export function createTaskSession(taskId: string, options?: { launch?: boolean }): Promise<{ task: unknown; session: Session }> {
+  return apiFetch<{ task: unknown; session: Session }>(`/tasks/${taskId}/session`, {
+    method: 'POST',
+    body: JSON.stringify(options ?? {}),
+  });
+}
+
+export interface FocusState {
+  taskId: string | null;
+  updatedAt: string;
+}
+
+export function getFocus(): Promise<FocusState> {
+  return apiFetch<FocusState>('/focus');
+}
+
+export function setFocus(taskId: string): Promise<FocusState> {
+  return apiFetch<FocusState>('/focus', { method: 'PUT', body: JSON.stringify({ taskId }) });
+}
+
+export function clearFocus(): Promise<FocusState> {
+  return apiFetch<FocusState>('/focus', { method: 'DELETE' });
+}
+
 export type { Session, SessionStatus, SessionFile };

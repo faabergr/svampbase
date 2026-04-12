@@ -11,6 +11,8 @@ import type {
 import { nanoid, formatRelativeTime, STATUS_LABELS, REMINDER_LABELS, computeReminderFiresAt } from '../lib/utils';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useSessions } from '../hooks/useSessions';
+import { useFocus } from '../hooks/useFocus';
+import { createTaskSession } from '../api/sessions';
 import type { Session } from '../lib/sessionTypes';
 import { SessionFiles } from './SessionFiles';
 
@@ -98,8 +100,12 @@ export function TaskModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Sessions tab
-  const { sessions, loading: sessionsLoading, error: sessionsError, createSession, updateSession: updateSessionHook, launchSession } = useSessions(task?.id);
-  const [newSessionName, setNewSessionName] = useState('');
+  const { sessions, loading: sessionsLoading, error: sessionsError, createSession, updateSession: updateSessionHook, launchSession, refresh: refreshSessions } = useSessions(task?.id);
+  const { focus, setFocus, clearFocus: clearFocusHook } = useFocus();
+  const isFocused = !!task && focus?.taskId === task.id;
+  const [newSessionName, setNewSessionName] = useState(() =>
+    task?.title?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ?? ''
+  );
   const [newSessionNotes, setNewSessionNotes] = useState('');
   const [newSessionLaunch, setNewSessionLaunch] = useState(false);
 
@@ -787,6 +793,32 @@ export function TaskModal({
 
             {activeTab === 'sessions' && (
               <div className="space-y-4">
+                {!sessionsError && !isNew && task && (
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={async () => {
+                        await createTaskSession(task.id, { launch: true });
+                        void refreshSessions();
+                      }}
+                      className="bg-blue-700 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded transition-colors"
+                      title="Provision a workspace folder for this task and open it in a terminal"
+                    >
+                      Open Workspace
+                    </button>
+                    <button
+                      onClick={() => void (isFocused ? clearFocusHook() : setFocus(task.id))}
+                      className={`text-sm px-3 py-1.5 rounded transition-colors ${
+                        isFocused
+                          ? 'bg-blue-900/60 border border-blue-700 text-blue-300 hover:bg-blue-900'
+                          : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                      }`}
+                      title={isFocused ? 'Clear focus from this task' : 'Set this task as the current focus'}
+                    >
+                      {isFocused ? 'Focused' : 'Set Focus'}
+                    </button>
+                  </div>
+                )}
+
                 {sessionsError && (
                   <div className="bg-slate-900/60 border border-slate-700 rounded p-3 text-slate-500 text-xs">
                     Start the backend server to manage Claude sessions (
@@ -898,7 +930,7 @@ export function TaskModal({
                             notes: newSessionNotes.trim() || undefined,
                             launch: newSessionLaunch,
                           });
-                          setNewSessionName('');
+                          setNewSessionName(task.title?.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') ?? '');
                           setNewSessionNotes('');
                           setNewSessionLaunch(false);
                         }}
