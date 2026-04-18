@@ -115,7 +115,7 @@ export default function App() {
     setReflectionLaunching(true);
     try {
       const summary = generateWeeklySummary(tasks, 7, journalEntries);
-      const prompt = `Here is a summary of everything I worked on this week as a manager:\n\n${summary}\n\nPlease help me reflect on this week. Ask me thoughtful questions about what went well, what was challenging, any patterns you notice in my work, and what I should focus on next week.`;
+      const prompt = `Here is a summary of everything I worked on this week as a manager:\n\n${summary}\n\nPlease help me reflect on this week. Ask me one thoughtful question at a time — wait for my response before asking the next one. Cover what went well, what was challenging, any patterns you notice in my work, and what I should focus on next week.`;
       await api.launchWeeklyReflection(prompt);
       dismissReflection();
     } catch (err) {
