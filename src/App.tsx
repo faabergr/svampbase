@@ -139,6 +139,7 @@ export default function App() {
         onSearchClick={() => setShowSearch(true)}
         onExport={exportJSON}
         onWeeklySummary={() => exportWeeklySummary(7, journalEntries)}
+        onWeeklyReflection={handleLaunchReflection}
         onJournalClick={() => setShowJournalPanel((v) => !v)}
         onStandupClick={() => setShowStandupPanel((v) => !v)}
         onTimelineClick={() => setShowTimelinePanel((v) => !v)}
