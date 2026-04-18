@@ -24,6 +24,7 @@ Thumbs.db
 
 # Logs
 *.log
+*.txt
 npm-debug.log*
 
 # TypeScript cache
