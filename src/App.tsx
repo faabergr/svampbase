@@ -6,6 +6,7 @@ import { useReminders } from './hooks/useReminders';
 import { useSessions } from './hooks/useSessions';
 import { useFocus } from './hooks/useFocus';
 import { useBackendStatus } from './hooks/useBackendStatus';
+import { useWeeklyReflection } from './hooks/useWeeklyReflection';
 import { Header } from './components/Header';
 import { Board } from './components/Board';
 import { TaskModal } from './components/TaskModal';
@@ -16,6 +17,9 @@ import { JournalPanel } from './components/JournalPanel';
 import { StandupPanel } from './components/StandupPanel';
 import { TimelinePanel } from './components/TimelinePanel';
 import { TagPanel } from './components/TagPanel';
+import { WeeklyReflectionBanner } from './components/WeeklyReflectionBanner';
+import { generateWeeklySummary } from './lib/weeklyExport';
+import { api } from './api/tasks';
 
 export default function App() {
   const {
@@ -38,6 +42,8 @@ export default function App() {
   const { focus, clearFocus } = useFocus();
   const focusedTask = focus?.taskId ? tasks.find((t) => t.id === focus.taskId) : null;
   const backendStatus = useBackendStatus();
+  const { shouldShow: showReflectionBanner, dismiss: dismissReflection } = useWeeklyReflection();
+  const [reflectionLaunching, setReflectionLaunching] = useState(false);
 
   const [modalTask, setModalTask] = useState<Task | null | undefined>(undefined); // undefined = closed, null = new
   const [showSearch, setShowSearch] = useState(false);
@@ -105,6 +111,20 @@ export default function App() {
     [updateTask]
   );
 
+  const handleLaunchReflection = useCallback(async () => {
+    setReflectionLaunching(true);
+    try {
+      const summary = generateWeeklySummary(tasks, 7, journalEntries);
+      const prompt = `Here is a summary of everything I worked on this week as a manager:\n\n${summary}\n\nPlease help me reflect on this week. Ask me thoughtful questions about what went well, what was challenging, any patterns you notice in my work, and what I should focus on next week.`;
+      await api.launchWeeklyReflection(prompt);
+      dismissReflection();
+    } catch (err) {
+      console.error('Failed to launch reflection:', err);
+    } finally {
+      setReflectionLaunching(false);
+    }
+  }, [tasks, journalEntries, dismissReflection]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -138,6 +158,16 @@ export default function App() {
             Backend not running — tasks won't load.{' '}
             <code className="font-mono text-red-300 text-xs">cd server && npm run dev</code>
           </p>
+        </div>
+      )}
+
+      {showReflectionBanner && (
+        <div className="px-4 pt-4">
+          <WeeklyReflectionBanner
+            onLaunch={handleLaunchReflection}
+            onDismiss={dismissReflection}
+            launching={reflectionLaunching}
+          />
         </div>
       )}
 

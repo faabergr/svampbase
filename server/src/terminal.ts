@@ -1,4 +1,7 @@
 import { execFileSync, spawnSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 function validateUUID(id: string): string {
   if (!/^[0-9a-f-]+$/i.test(id)) throw new Error(`Invalid session ID: ${id}`);
@@ -73,4 +76,10 @@ export function launchNewSession(sessionId: string, folderPath: string): void {
 export function resumeSession(sessionId: string, folderPath: string): void {
   const id = validateUUID(sessionId);
   launch(`claude --resume ${id}; ${statusCallback(id)}`, folderPath);
+}
+
+export function launchWeeklyReflection(prompt: string): void {
+  const tmpFile = path.join(os.tmpdir(), `svampbase-reflection-${Date.now()}.txt`);
+  fs.writeFileSync(tmpFile, prompt, 'utf-8');
+  launch(`claude "$(cat '${tmpFile}')"`, os.homedir());
 }
