@@ -28,4 +28,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ tasks }),
     }),
+  launchWeeklyReflection: (prompt: string) =>
+    apiFetch<void>('/reflection/launch', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    }),
 };

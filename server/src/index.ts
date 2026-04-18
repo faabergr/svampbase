@@ -8,7 +8,7 @@ import { getAllSessions, getSession, upsertSession, deleteSession, createSession
 import { getAllTasks, getTask, upsertTask, deleteTask as deleteTaskStore, replaceAllTasks, generateTaskId } from './tasks';
 import { getAllEntries, getEntry, upsertEntry, deleteEntry } from './journal';
 import { getFocus, setFocus, clearFocus } from './focus';
-import { launchNewSession, resumeSession } from './terminal';
+import { launchNewSession, resumeSession, launchWeeklyReflection } from './terminal';
 import type { Session, SessionStatus, SessionFile } from './types';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -421,6 +421,20 @@ app.put('/focus', (req, res) => {
 app.delete('/focus', (_req, res) => {
   clearFocus();
   res.json(getFocus());
+});
+
+// --- Weekly Reflection ---
+
+app.post('/reflection/launch', (req, res) => {
+  const { prompt } = req.body as { prompt?: string };
+  if (!prompt?.trim()) { res.status(400).json({ error: 'prompt is required' }); return; }
+  try {
+    launchWeeklyReflection(prompt);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Reflection launch failed:', err);
+    res.status(500).json({ error: String(err) });
+  }
 });
 
 app.get('/health', (_req, res) => res.json({ ok: true }));

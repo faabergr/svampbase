@@ -11,7 +11,20 @@ vi.mock('child_process', () => ({
   spawnSync: mockSpawnSync,
 }));
 
-import { launchNewSession, resumeSession } from '../terminal';
+const { mockMkdirSync, mockWriteFileSync } = vi.hoisted(() => ({
+  mockMkdirSync: vi.fn(),
+  mockWriteFileSync: vi.fn(),
+}));
+
+vi.mock('fs', () => ({
+  default: {
+    mkdirSync: mockMkdirSync,
+    writeFileSync: mockWriteFileSync,
+    existsSync: vi.fn(() => true),
+  },
+}));
+
+import { launchNewSession, resumeSession, launchWeeklyReflection } from '../terminal';
 
 const VALID_UUID = '123e4567-e89b-12d3-a456-426614174000';
 const FOLDER = '/tmp/test-session';
@@ -64,5 +77,40 @@ describe('resumeSession', () => {
   it('rejects an invalid session ID', () => {
     expect(() => resumeSession('bad id', FOLDER)).toThrow();
     expect(mockExecFileSync).not.toHaveBeenCalled();
+  });
+});
+
+describe('launchWeeklyReflection', () => {
+  beforeEach(() => {
+    mockExecFileSync.mockClear();
+    mockMkdirSync.mockClear();
+    mockWriteFileSync.mockClear();
+  });
+
+  it('creates a dated folder under reflections/', () => {
+    launchWeeklyReflection('some prompt');
+    const folderArg = mockMkdirSync.mock.calls[0][0] as string;
+    expect(folderArg).toMatch(/reflections[\\/]\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('writes the prompt to prompt.md in the dated folder', () => {
+    launchWeeklyReflection('my weekly summary');
+    const [filePath, content] = mockWriteFileSync.mock.calls[0] as [string, string];
+    expect(filePath).toMatch(/prompt\.md$/);
+    expect(content).toBe('my weekly summary');
+  });
+
+  it('launches claude with the prompt file as input', () => {
+    launchWeeklyReflection('some prompt');
+    const cmd = capturedCommand();
+    expect(cmd).toContain('claude');
+    expect(cmd).toContain('prompt.md');
+  });
+
+  it('uses the dated folder as the working directory', () => {
+    launchWeeklyReflection('some prompt');
+    const cmd = capturedCommand();
+    const today = new Date().toISOString().slice(0, 10);
+    expect(cmd).toContain(today);
   });
 });

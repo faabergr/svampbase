@@ -35,4 +35,5 @@ server/data/sessions.json
 server/data/tasks.json
 server/data/journal.json
 server/sessions/
+server/reflections/*/
 server/node_modules/

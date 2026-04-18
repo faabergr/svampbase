@@ -7,6 +7,7 @@ interface HeaderProps {
   onNewTask: () => void;
   onSessionsClick: () => void;
   onWeeklySummary: () => void;
+  onWeeklyReflection: () => void;
   onJournalClick: () => void;
   onStandupClick: () => void;
   hasActiveSessions?: boolean;
@@ -15,7 +16,7 @@ interface HeaderProps {
   onClearFocus?: () => void;
 }
 
-export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onJournalClick, onStandupClick, hasActiveSessions, focusedTaskId, focusedTaskTitle, onClearFocus }: HeaderProps) {
+export function Header({ onSearchClick, onExport, onImport, onNewTask, onSessionsClick, onWeeklySummary, onWeeklyReflection, onJournalClick, onStandupClick, hasActiveSessions, focusedTaskId, focusedTaskTitle, onClearFocus }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -134,6 +135,14 @@ export function Header({ onSearchClick, onExport, onImport, onNewTask, onSession
               >
                 <span>This week</span>
                 <span className="text-xs text-slate-500">Download weekly summary (.md)</span>
+              </button>
+
+              <button
+                onClick={() => menuAction(onWeeklyReflection)}
+                className="w-full text-left px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors flex flex-col gap-0.5"
+              >
+                <span>Weekly reflection</span>
+                <span className="text-xs text-slate-500">Open Claude reflection session</span>
               </button>
 
               <div className="border-t border-slate-700 my-1" />
