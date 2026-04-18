@@ -1,6 +1,5 @@
 import { execFileSync, spawnSync } from 'child_process';
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 
 function validateUUID(id: string): string {
@@ -78,8 +77,15 @@ export function resumeSession(sessionId: string, folderPath: string): void {
   launch(`claude --resume ${id}; ${statusCallback(id)}`, folderPath);
 }
 
+const REFLECTIONS_FOLDER = path.join(__dirname, '..', 'reflections');
+
 export function launchWeeklyReflection(prompt: string): void {
-  const tmpFile = path.join(os.tmpdir(), `svampbase-reflection-${Date.now()}.txt`);
-  fs.writeFileSync(tmpFile, prompt, 'utf-8');
-  launch(`claude "$(cat '${tmpFile}')"`, os.homedir());
+  const dateStamp = new Date().toISOString().slice(0, 10);
+  const folderPath = path.join(REFLECTIONS_FOLDER, dateStamp);
+  fs.mkdirSync(folderPath, { recursive: true });
+
+  const promptFile = path.join(folderPath, 'prompt.md');
+  fs.writeFileSync(promptFile, prompt, 'utf-8');
+
+  launch(`claude "$(cat '${promptFile}')"`, folderPath);
 }
