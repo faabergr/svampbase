@@ -32,6 +32,7 @@ vi.mock('../tasks', () => ({
 vi.mock('../terminal', () => ({
   launchNewSession: vi.fn(),
   resumeSession: vi.fn(),
+  launchWeeklyReflection: vi.fn(),
 }));
 
 import { app } from '../index';
@@ -119,6 +120,32 @@ describe('DELETE /sessions/:id', () => {
     const res = await request(app).delete('/sessions/sess-1');
     expect(res.status).toBe(204);
     expect(mockSessions.has('sess-1')).toBe(false);
+  });
+});
+
+describe('POST /reflection/launch', () => {
+  it('returns 400 when prompt is missing', async () => {
+    const res = await request(app).post('/reflection/launch').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when prompt is empty string', async () => {
+    const res = await request(app).post('/reflection/launch').send({ prompt: '   ' });
+    expect(res.status).toBe(400);
+  });
+
+  it('calls launchWeeklyReflection and returns 204', async () => {
+    const res = await request(app).post('/reflection/launch').send({ prompt: 'Here is my week...' });
+    expect(res.status).toBe(204);
+    expect(terminalMod.launchWeeklyReflection).toHaveBeenCalledWith('Here is my week...');
+  });
+
+  it('returns 500 when launchWeeklyReflection throws', async () => {
+    vi.mocked(terminalMod.launchWeeklyReflection).mockImplementationOnce(() => {
+      throw new Error('terminal not found');
+    });
+    const res = await request(app).post('/reflection/launch').send({ prompt: 'my prompt' });
+    expect(res.status).toBe(500);
   });
 });
 
